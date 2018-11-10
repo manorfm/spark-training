@@ -4,6 +4,7 @@ import java.util.Properties
 
 import org.apache.log4j.LogManager
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
 
 object NeatTotal {
   def main(args: Array[String]): Unit = {
@@ -21,45 +22,39 @@ object NeatTotal {
 
     val spark = SparkSession
       .builder()
-//      .master("local")
+      .master("local")
       .appName("Data Engineering Capability Development - ETL Exercises")
       .getOrCreate()
 
-    val dfOrdersRaw = spark.read
-      .option("delimiter", ";")
+    val orderItemsDF = spark.read
       .option("header", true)
       .option("infer_schema", true)
-      .csv(ordersBucket)
-
-    val dfOrderItemsRaw = spark.read
       .option("delimiter", ";")
-      .option("header", true)
-      .option("infer_schema", true)
       .csv(orderItemsBucket)
+        //.createTempView("orderItems")
 
-    val dfProductsRaw = spark.read
-      .option("delimiter", ";")
+    val productsDF = spark.read
       .option("header", true)
       .option("infer_schema", true)
+      .option("delimiter", ";")
       .csv(productsBucket)
+        //.createTempView("products")
 
-    import org.apache.spark.sql.functions._
     import spark.implicits._
 
-    val dfOrdersWithItems = dfOrdersRaw
-      .join(dfOrderItemsRaw, "OrderId")
-      .as("ooi")
-      .join(dfProductsRaw.as("p"), col("ooi.ProductId") === col("p.ProductId"))
+    val total = orderItemsDF.join(productsDF, Seq("ProductId"), "inner")
+      .groupBy($"ProductId", $"Name")
+      .agg(
+        //sum($"Price" - $"Discount"),
+        sum(($"Price" - $"Discount") * $"Quantity").as("Total"))
+      .drop($"ProductId")
+      .select(sum($"Total").as("Total"))
+      //.show(false)
+      .collect()(0).getAs[Double](0)
+    //74.988,48
 
-    val total = dfOrdersWithItems.agg(sum(($"p.Price" - $"ooi.Discount") * $"ooi.Quantity" ).as("total"))
-      .select("total").first().getAs[Double]("total")
+    print($"valor total: $total")
 
-    val locale = new java.util.Locale("pt", "BR")
-    val formatter = java.text.NumberFormat.getCurrencyInstance(locale)
-    val totalFormatted = formatter.format(total)
-
-    log.info(s"O total de vendas foi $totalFormatted")
-    println(s"O total de vendas foi $totalFormatted")
     //185.670.050.745
     //cento e oitenta e cinco bilhões, seiscentos e setenta milhões, cinquenta mil e setecentos e quarenta e cinco
   }
