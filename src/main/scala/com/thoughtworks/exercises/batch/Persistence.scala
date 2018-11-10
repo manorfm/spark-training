@@ -28,6 +28,7 @@ object Persistence {
     .builder()
     //.master("local")
     .appName("Data Engineering Capability Development - ETL Exercises")
+      //.config("spark.com.thoughtworks.sql.warehouse.dir", "/user/hive/warehouse")
     .getOrCreate()
 
     import spark.implicits._
@@ -50,8 +51,8 @@ object Persistence {
       .repartition(200, $"OrderId")
       .write
       .mode(SaveMode.Overwrite)
-      .partitionBy("OrderId")
-      .parquet(orderItemsParquetBucket)
+      //.partitionBy("OrderId")
+      .orc(orderItemsParquetBucket)
 
     spark.read
       .option("delimiter", ";")
