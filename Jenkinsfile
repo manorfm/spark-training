@@ -1,7 +1,7 @@
 timestamps {
     node() {
         def userId = "par_03"
-        def mainClass = "com.thoughtworks.exercises.streaming.NeatTotal"
+        def mainClass = "com.thoughtworks.exercises.batch.NeatTotal"
         def artifactBucket = "com.thoughtworks.training.de.recife/${userId}/bin"
 
         stage('Spark Exercises - Checkout') {
